@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Telemetry Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0e17; color: #e0e0e0; }
+        header { background: #111827; padding: 16px 24px; border-bottom: 1px solid #1e293b; }
+        header h1 { font-size: 20px; color: #38bdf8; }
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+        .card {
+            background: #1e293b; border-radius: 8px; padding: 20px;
+            border: 1px solid #334155; transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #38bdf8; }
+        .card h2 { font-size: 16px; color: #38bdf8; margin-bottom: 12px; }
+        .card .field { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+        .card .field .label { color: #94a3b8; }
+        .card .field .value { font-weight: 600; }
+
+        .status-flying { color: #4ade80; }
+        .status-hovering { color: #facc15; }
+        .status-landed { color: #94a3b8; }
+        .status-idle { color: #94a3b8; }
+
+        .btn {
+            margin-top: 12px; padding: 8px 16px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 13px; font-weight: 600;
+        }
+        .btn-land { background: #ef4444; color: white; }
+        .btn-hover { background: #f59e0b; color: white; }
+        .btn-rth { background: #3b82f6; color: white; }
+        .btn:hover { opacity: 0.85; }
+        .commands { display: flex; gap: 8px; margin-top: 12px; }
+
+        .alerts { margin-top: 24px; }
+        .alert-item {
+            background: #7f1d1d; border: 1px solid #991b1b; border-radius: 6px;
+            padding: 10px 16px; margin-bottom: 8px; font-size: 13px;
+        }
+
+        #no-drones { text-align: center; padding: 60px; color: #64748b; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Drone Telemetry Monitor</h1>
+    </header>
+    <div class="container">
+        <div id="no-drones">Aguardando dados de telemetria...</div>
+        <div id="drone-grid" class="grid"></div>
+        <div class="alerts">
+            <div id="alerts-container"></div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchJSON(url) {
+            const resp = await fetch(url);
+            return resp.json();
+        }
+
+        function createField(label, value, extraClass) {
+            const row = document.createElement('div');
+            row.className = 'field';
+            const lbl = document.createElement('span');
+            lbl.className = 'label';
+            lbl.textContent = label;
+            const val = document.createElement('span');
+            val.className = 'value' + (extraClass ? ' ' + extraClass : '');
+            val.textContent = value;
+            row.appendChild(lbl);
+            row.appendChild(val);
+            return row;
+        }
+
+        function createButton(text, cls, droneId, cmdType) {
+            const btn = document.createElement('button');
+            btn.className = 'btn ' + cls;
+            btn.textContent = text;
+            btn.addEventListener('click', function() { sendCmd(droneId, cmdType); });
+            return btn;
+        }
+
+        function buildDroneCard(droneId, d) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = 'card-' + droneId;
+
+            const title = document.createElement('h2');
+            title.textContent = droneId;
+            card.appendChild(title);
+
+            const statusCls = 'status-' + (d.status || 'idle').toLowerCase();
+            card.appendChild(createField('Status', d.status, statusCls));
+            card.appendChild(createField('Latitude', d.lat.toFixed(4)));
+            card.appendChild(createField('Longitude', d.lon.toFixed(4)));
+            card.appendChild(createField('Altitude', d.alt.toFixed(1) + ' m'));
+            card.appendChild(createField('Velocidade', d.speed.toFixed(1) + ' m/s'));
+            card.appendChild(createField('Bateria', d.battery.toFixed(1) + '%'));
+
+            const cmds = document.createElement('div');
+            cmds.className = 'commands';
+            cmds.appendChild(createButton('LAND', 'btn-land', droneId, 'LAND'));
+            cmds.appendChild(createButton('HOVER', 'btn-hover', droneId, 'HOVER'));
+            cmds.appendChild(createButton('RTH', 'btn-rth', droneId, 'RTH'));
+            card.appendChild(cmds);
+
+            return card;
+        }
+
+        async function sendCmd(droneId, type) {
+            const resp = await fetch('/api/drones/' + encodeURIComponent(droneId) + '/command', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({type: type}),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                console.error('Erro:', data.error);
+            }
+        }
+
+        async function refresh() {
+            const {drones} = await fetchJSON('/api/drones');
+            const grid = document.getElementById('drone-grid');
+            const noDrones = document.getElementById('no-drones');
+
+            if (drones.length === 0) {
+                noDrones.style.display = 'block';
+                while (grid.firstChild) grid.removeChild(grid.firstChild);
+                return;
+            }
+            noDrones.style.display = 'none';
+
+            while (grid.firstChild) grid.removeChild(grid.firstChild);
+            for (const id of drones) {
+                const data = await fetchJSON('/api/drones/' + encodeURIComponent(id));
+                grid.appendChild(buildDroneCard(id, data.latest));
+            }
+
+            const {alerts} = await fetchJSON('/api/alerts');
+            const ac = document.getElementById('alerts-container');
+            while (ac.firstChild) ac.removeChild(ac.firstChild);
+            for (const a of alerts) {
+                const div = document.createElement('div');
+                div.className = 'alert-item';
+                div.textContent = a.drone_id + ' - ' + a.alert_type + ': ' + a.message;
+                ac.appendChild(div);
+            }
+        }
+
+        refresh();
+        setInterval(refresh, 2000);
+    </script>
+</body>
+</html>
