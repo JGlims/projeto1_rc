@@ -165,7 +165,16 @@ class TestDroneSimulator:
         time.sleep(0.15)
         tcp_server.send_command("LAND")
         tcp_server.receive_ack()
-        time.sleep(0.2)
-        udp_receiver.receive(1)
+        time.sleep(0.25)
         drone.stop()
-        assert udp_receiver.packets[0]["status"] == "landed"
+        time.sleep(0.1)
+        udp_receiver._sock.settimeout(0.3)
+        last = None
+        while True:
+            try:
+                data, _ = udp_receiver._sock.recvfrom(BUFFER_SIZE)
+                last = parse_telemetry_packet(data)
+            except socket.timeout:
+                break
+        assert last is not None
+        assert last["status"] == "landed"
