@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from src.common.config import UDP_TELEMETRY_PORT, SERVER_HOST, BUFFER_SIZE
 from src.common.protocol import parse_telemetry_packet
+from src.common.metrics import ThroughputTracker
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class UDPTelemetryServer:
         self._thread = None
         self._lock = threading.Lock()
         self._telemetry = {}
+        self.throughput = ThroughputTracker()
         self.running = False
 
     @property
@@ -53,6 +55,7 @@ class UDPTelemetryServer:
             except OSError:
                 break
 
+            self.throughput.record(len(data))
             ts = datetime.now(timezone.utc).isoformat()
             try:
                 packet = parse_telemetry_packet(data)

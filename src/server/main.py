@@ -24,7 +24,7 @@ class GroundStation:
         self._db = StorageDB(db_path)
         self._udp = UDPTelemetryServer(host, udp_port)
         self._tcp = TCPCommandServer(host, tcp_port)
-        self._app = create_app(self._db, self._tcp)
+        self._app = create_app(self._db, self._tcp, self._udp)
         self._running = False
         self._alert_sent = {}
 

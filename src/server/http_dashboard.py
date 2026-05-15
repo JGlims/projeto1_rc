@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, render_template
 logger = logging.getLogger(__name__)
 
 
-def create_app(storage, tcp_server=None):
+def create_app(storage, tcp_server=None, udp_server=None):
     app = Flask(
         __name__,
         template_folder="../dashboard/templates",
@@ -15,6 +15,7 @@ def create_app(storage, tcp_server=None):
     )
     app.config["storage"] = storage
     app.config["tcp_server"] = tcp_server
+    app.config["udp_server"] = udp_server
 
     @app.route("/")
     def index():
@@ -70,5 +71,19 @@ def create_app(storage, tcp_server=None):
         drone_id = request.args.get("drone_id")
         alerts = db.get_alerts(drone_id)
         return jsonify({"alerts": alerts})
+
+    @app.route("/api/metrics")
+    def get_metrics():
+        result = {}
+        tcp = app.config["tcp_server"]
+        udp = app.config["udp_server"]
+        if tcp:
+            result["rtt"] = {
+                "measurements": tcp.rtt.all(),
+                "average_sec": tcp.rtt.average(),
+            }
+        if udp:
+            result["throughput"] = udp.throughput.summary()
+        return jsonify(result)
 
     return app

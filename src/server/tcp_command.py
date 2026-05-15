@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from src.common.config import TCP_COMMAND_PORT, SERVER_HOST, BUFFER_SIZE
 from src.common.protocol import build_command_packet, parse_ack_packet
+from src.common.metrics import RTTTracker
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class TCPCommandServer:
         self._drones = {}
         self._pending_commands = {}
         self._command_results = {}
+        self.rtt = RTTTracker()
         self.running = False
 
     @property
@@ -104,6 +106,7 @@ class TCPCommandServer:
                     except ValueError:
                         continue
                     cmd_id = ack["cmd_id"]
+                    self.rtt.finish(cmd_id)
                     with self._lock:
                         self._command_results[cmd_id] = ack
                     ts = datetime.now(timezone.utc).isoformat()
@@ -128,6 +131,7 @@ class TCPCommandServer:
         cmd_id = json.loads(pkt)["cmd_id"]
         payload = pkt.encode("utf-8") + b"\n"
 
+        self.rtt.start(cmd_id)
         try:
             drone_info["sock"].sendall(payload)
         except OSError:
