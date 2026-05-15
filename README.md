@@ -115,6 +115,17 @@ pytest
 
 ## Execucao
 
+### Modo rapido (demo completa)
+
+```bash
+python run_demo.py
+```
+
+Levanta servidor + 3 drones simulados. Login: `admin` / `admin`.
+Abrir http://localhost:8080 no navegador.
+
+### Modo manual (terminais separados)
+
 ```bash
 # Terminal 1 - Servidor (inicia UDP + TCP + HTTP)
 python -m src.server.main
@@ -126,9 +137,15 @@ python -m src.client.drone_simulator
 python -m src.client.drone_simulator --drone-id DRONE-02
 ```
 
-Abrir http://localhost:8080 no navegador para o dashboard.
-
 Primeiro acesso: clicar em "Criar conta", depois fazer login.
+
+### Benchmark de metricas
+
+```bash
+python run_metrics.py
+```
+
+Executa 5 drones por 10 segundos e imprime RTT e throughput.
 
 ## Demonstracao com Wireshark
 
