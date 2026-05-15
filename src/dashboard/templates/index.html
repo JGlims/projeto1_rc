@@ -44,9 +44,34 @@
         }
 
         #no-drones { text-align: center; padding: 60px; color: #64748b; font-size: 16px; }
+
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        #login-box { background: #1e293b; padding: 32px; border-radius: 12px; width: 340px; border: 1px solid #334155; }
+        #login-box h2 { color: #38bdf8; margin-bottom: 20px; font-size: 18px; }
+        #login-box input {
+            width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px;
+            border: 1px solid #334155; background: #0f172a; color: #e0e0e0; font-size: 14px;
+        }
+        #login-box .btn-login { width: 100%; background: #38bdf8; color: #0a0e17; padding: 10px; font-weight: 700; }
+        #login-box .btn-register { width: 100%; background: #334155; color: #e0e0e0; padding: 10px; margin-top: 8px; }
+        #login-msg { color: #ef4444; font-size: 13px; margin-bottom: 8px; min-height: 18px; }
     </style>
 </head>
 <body>
+    <div id="login-overlay">
+        <div id="login-box">
+            <h2>Login</h2>
+            <div id="login-msg"></div>
+            <input type="text" id="login-user" placeholder="Usuario">
+            <input type="password" id="login-pass" placeholder="Senha">
+            <button class="btn btn-login" id="btn-login">Entrar</button>
+            <button class="btn btn-register" id="btn-register">Criar conta</button>
+        </div>
+    </div>
     <header>
         <h1>Drone Telemetry Monitor</h1>
     </header>
@@ -66,6 +91,49 @@
     </div>
 
     <script>
+        let authToken = null;
+
+        document.getElementById('btn-login').addEventListener('click', async function() {
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            const msg = document.getElementById('login-msg');
+            const resp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass}),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                authToken = data.token;
+                document.getElementById('login-overlay').style.display = 'none';
+                refresh();
+                refreshMetrics();
+            } else {
+                msg.textContent = 'Usuario ou senha incorretos';
+            }
+        });
+
+        document.getElementById('btn-register').addEventListener('click', async function() {
+            const user = document.getElementById('login-user').value;
+            const pass = document.getElementById('login-pass').value;
+            const msg = document.getElementById('login-msg');
+            if (!user || !pass) { msg.textContent = 'Preencha usuario e senha'; return; }
+            const resp = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass}),
+            });
+            if (resp.ok) {
+                msg.textContent = '';
+                msg.style.color = '#4ade80';
+                msg.textContent = 'Conta criada! Faca login.';
+                msg.style.color = '#4ade80';
+            } else {
+                msg.style.color = '#ef4444';
+                msg.textContent = 'Usuario ja existe';
+            }
+        });
+
         async function fetchJSON(url) {
             const resp = await fetch(url);
             return resp.json();
@@ -121,9 +189,11 @@
         }
 
         async function sendCmd(droneId, type) {
+            const headers = {'Content-Type': 'application/json'};
+            if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
             const resp = await fetch('/api/drones/' + encodeURIComponent(droneId) + '/command', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: headers,
                 body: JSON.stringify({type: type}),
             });
             const data = await resp.json();

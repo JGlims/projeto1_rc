@@ -8,6 +8,7 @@ from src.server.udp_telemetry import UDPTelemetryServer
 from src.server.tcp_command import TCPCommandServer
 from src.server.http_dashboard import create_app
 from src.server.storage import StorageDB
+from src.server.auth import AuthManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,10 @@ class GroundStation:
         self._host = host
         self._http_port = http_port
         self._db = StorageDB(db_path)
+        self._auth = AuthManager(db_path)
         self._udp = UDPTelemetryServer(host, udp_port)
         self._tcp = TCPCommandServer(host, tcp_port)
-        self._app = create_app(self._db, self._tcp, self._udp)
+        self._app = create_app(self._db, self._tcp, self._udp, self._auth)
         self._running = False
         self._alert_sent = {}
 
