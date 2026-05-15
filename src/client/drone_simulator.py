@@ -144,8 +144,14 @@ class DroneSimulator:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--drone-id", default="DRONE-01")
+    parser.add_argument("--server", default=SERVER_HOST)
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    drone = DroneSimulator()
+    drone = DroneSimulator(drone_id=args.drone_id, udp_host=args.server, tcp_host=args.server)
     drone.start()
     try:
         while True:
