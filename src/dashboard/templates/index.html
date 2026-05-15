@@ -53,6 +53,13 @@
     <div class="container">
         <div id="no-drones">Aguardando dados de telemetria...</div>
         <div id="drone-grid" class="grid"></div>
+        <div id="metrics-panel" class="card" style="margin-top:24px; display:none;">
+            <h2>Metricas de Rede</h2>
+            <div class="field"><span class="label">RTT medio</span><span class="value" id="m-rtt">--</span></div>
+            <div class="field"><span class="label">Throughput UDP</span><span class="value" id="m-throughput">--</span></div>
+            <div class="field"><span class="label">Pacotes recebidos</span><span class="value" id="m-packets">--</span></div>
+            <div class="field"><span class="label">Bytes totais</span><span class="value" id="m-bytes">--</span></div>
+        </div>
         <div class="alerts">
             <div id="alerts-container"></div>
         </div>
@@ -154,8 +161,26 @@
             }
         }
 
+        async function refreshMetrics() {
+            const data = await fetchJSON('/api/metrics');
+            const panel = document.getElementById('metrics-panel');
+            if (data.rtt || data.throughput) {
+                panel.style.display = 'block';
+            }
+            if (data.rtt && data.rtt.average_sec !== null) {
+                document.getElementById('m-rtt').textContent = (data.rtt.average_sec * 1000).toFixed(2) + ' ms';
+            }
+            if (data.throughput) {
+                document.getElementById('m-throughput').textContent = (data.throughput.bytes_per_second / 1024).toFixed(2) + ' KB/s';
+                document.getElementById('m-packets').textContent = data.throughput.packet_count;
+                document.getElementById('m-bytes').textContent = data.throughput.total_bytes;
+            }
+        }
+
         refresh();
+        refreshMetrics();
         setInterval(refresh, 2000);
+        setInterval(refreshMetrics, 3000);
     </script>
 </body>
 </html>
