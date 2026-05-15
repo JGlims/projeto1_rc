@@ -1,13 +1,14 @@
 import json
 import logging
 from datetime import datetime, timezone
+from functools import wraps
 
 from flask import Flask, jsonify, request, render_template
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(storage, tcp_server=None, udp_server=None):
+def create_app(storage, tcp_server=None, udp_server=None, auth=None):
     app = Flask(
         __name__,
         template_folder="../dashboard/templates",
@@ -16,10 +17,56 @@ def create_app(storage, tcp_server=None, udp_server=None):
     app.config["storage"] = storage
     app.config["tcp_server"] = tcp_server
     app.config["udp_server"] = udp_server
+    app.config["auth"] = auth
+
+    def require_auth(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth_mgr = app.config["auth"]
+            if not auth_mgr:
+                return f(*args, **kwargs)
+            header = request.headers.get("Authorization", "")
+            if not header.startswith("Bearer "):
+                return jsonify({"error": "authentication required"}), 401
+            token = header[7:]
+            user = auth_mgr.validate_token(token)
+            if not user:
+                return jsonify({"error": "invalid token"}), 401
+            return f(*args, **kwargs)
+        return decorated
 
     @app.route("/")
     def index():
         return render_template("index.html")
+
+    @app.route("/api/auth/register", methods=["POST"])
+    def register():
+        auth_mgr = app.config["auth"]
+        if not auth_mgr:
+            return jsonify({"error": "auth not configured"}), 503
+        body = request.get_json(silent=True) or {}
+        username = body.get("username")
+        password = body.get("password")
+        if not username or not password:
+            return jsonify({"error": "missing username or password"}), 400
+        if auth_mgr.register(username, password):
+            return jsonify({"status": "registered"}), 201
+        return jsonify({"error": "username already exists"}), 409
+
+    @app.route("/api/auth/login", methods=["POST"])
+    def login():
+        auth_mgr = app.config["auth"]
+        if not auth_mgr:
+            return jsonify({"error": "auth not configured"}), 503
+        body = request.get_json(silent=True) or {}
+        username = body.get("username")
+        password = body.get("password")
+        if not auth_mgr.authenticate(username, password):
+            return jsonify({"error": "invalid credentials"}), 401
+        token = auth_mgr.create_token(username)
+        ts = datetime.now(timezone.utc).isoformat()
+        logger.info(f"[{ts}] HTTP login: {username}")
+        return jsonify({"token": token})
 
     @app.route("/api/drones")
     def list_drones():
@@ -43,6 +90,7 @@ def create_app(storage, tcp_server=None, udp_server=None):
         return jsonify({"drone_id": drone_id, "telemetry": rows})
 
     @app.route("/api/drones/<drone_id>/command", methods=["POST"])
+    @require_auth
     def send_command(drone_id):
         tcp = app.config["tcp_server"]
         body = request.get_json(silent=True) or {}
