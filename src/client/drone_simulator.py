@@ -43,6 +43,7 @@ class DroneSimulator:
         self._udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self._tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._tcp_sock.settimeout(5)
         self._tcp_sock.connect((self._tcp_host, self._tcp_port))
         self._tcp_sock.settimeout(0.5)
 
