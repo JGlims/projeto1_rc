@@ -113,25 +113,8 @@
             }
         });
 
-        document.getElementById('btn-register').addEventListener('click', async function() {
-            const user = document.getElementById('login-user').value;
-            const pass = document.getElementById('login-pass').value;
-            const msg = document.getElementById('login-msg');
-            if (!user || !pass) { msg.textContent = 'Preencha usuario e senha'; return; }
-            const resp = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username: user, password: pass}),
-            });
-            if (resp.ok) {
-                msg.textContent = '';
-                msg.style.color = '#4ade80';
-                msg.textContent = 'Conta criada! Faca login.';
-                msg.style.color = '#4ade80';
-            } else {
-                msg.style.color = '#ef4444';
-                msg.textContent = 'Usuario ja existe';
-            }
+        document.getElementById('btn-register').addEventListener('click', function() {
+            window.location.href = '/register';
         });
 
         async function fetchJSON(url) {
@@ -139,53 +122,64 @@
             return resp.json();
         }
 
-        function createField(label, value, extraClass) {
-            const row = document.createElement('div');
-            row.className = 'field';
-            const lbl = document.createElement('span');
-            lbl.className = 'label';
-            lbl.textContent = label;
-            const val = document.createElement('span');
-            val.className = 'value' + (extraClass ? ' ' + extraClass : '');
-            val.textContent = value;
-            row.appendChild(lbl);
-            row.appendChild(val);
-            return row;
-        }
-
-        function createButton(text, cls, droneId, cmdType) {
-            const btn = document.createElement('button');
-            btn.className = 'btn ' + cls;
-            btn.textContent = text;
-            btn.addEventListener('click', function() { sendCmd(droneId, cmdType); });
-            return btn;
-        }
-
         function buildDroneCard(droneId, d) {
             const card = document.createElement('div');
             card.className = 'card';
-            card.id = 'card-' + droneId;
+            card.setAttribute('data-drone-id', droneId);
 
             const title = document.createElement('h2');
             title.textContent = droneId;
             card.appendChild(title);
 
-            const statusCls = 'status-' + (d.status || 'idle').toLowerCase();
-            card.appendChild(createField('Status', d.status, statusCls));
-            card.appendChild(createField('Latitude', d.lat.toFixed(4)));
-            card.appendChild(createField('Longitude', d.lon.toFixed(4)));
-            card.appendChild(createField('Altitude', d.alt.toFixed(1) + ' m'));
-            card.appendChild(createField('Velocidade', d.speed.toFixed(1) + ' m/s'));
-            card.appendChild(createField('Bateria', d.battery.toFixed(1) + '%'));
+            const fields = [
+                {key: 'status', label: 'Status'},
+                {key: 'lat', label: 'Latitude'},
+                {key: 'lon', label: 'Longitude'},
+                {key: 'alt', label: 'Altitude'},
+                {key: 'speed', label: 'Velocidade'},
+                {key: 'battery', label: 'Bateria'},
+            ];
+
+            for (const f of fields) {
+                const row = document.createElement('div');
+                row.className = 'field';
+                const lbl = document.createElement('span');
+                lbl.className = 'label';
+                lbl.textContent = f.label;
+                const val = document.createElement('span');
+                val.className = 'value';
+                val.setAttribute('data-field', f.key);
+                row.appendChild(lbl);
+                row.appendChild(val);
+                card.appendChild(row);
+            }
 
             const cmds = document.createElement('div');
             cmds.className = 'commands';
-            cmds.appendChild(createButton('LAND', 'btn-land', droneId, 'LAND'));
-            cmds.appendChild(createButton('HOVER', 'btn-hover', droneId, 'HOVER'));
-            cmds.appendChild(createButton('RTH', 'btn-rth', droneId, 'RTH'));
+            ['LAND', 'HOVER', 'RTH'].forEach(function(type) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-' + type.toLowerCase();
+                btn.textContent = type;
+                btn.addEventListener('click', function() { sendCmd(droneId, type); });
+                cmds.appendChild(btn);
+            });
             card.appendChild(cmds);
 
+            updateCard(card, d);
             return card;
+        }
+
+        function updateCard(card, d) {
+            const statusVal = card.querySelector('[data-field="status"]');
+            const status = d.status || 'idle';
+            statusVal.textContent = status;
+            statusVal.className = 'value status-' + status.toLowerCase();
+
+            card.querySelector('[data-field="lat"]').textContent = d.lat.toFixed(4);
+            card.querySelector('[data-field="lon"]').textContent = d.lon.toFixed(4);
+            card.querySelector('[data-field="alt"]').textContent = d.alt.toFixed(1) + ' m';
+            card.querySelector('[data-field="speed"]').textContent = d.speed.toFixed(1) + ' m/s';
+            card.querySelector('[data-field="battery"]').textContent = d.battery.toFixed(1) + '%';
         }
 
         async function sendCmd(droneId, type) {
@@ -209,15 +203,26 @@
 
             if (drones.length === 0) {
                 noDrones.style.display = 'block';
-                while (grid.firstChild) grid.removeChild(grid.firstChild);
+                grid.querySelectorAll('[data-drone-id]').forEach(function(el) { el.remove(); });
                 return;
             }
             noDrones.style.display = 'none';
 
-            while (grid.firstChild) grid.removeChild(grid.firstChild);
+            const activeDrones = new Set(drones);
+            grid.querySelectorAll('[data-drone-id]').forEach(function(card) {
+                if (!activeDrones.has(card.getAttribute('data-drone-id'))) {
+                    card.remove();
+                }
+            });
+
             for (const id of drones) {
                 const data = await fetchJSON('/api/drones/' + encodeURIComponent(id));
-                grid.appendChild(buildDroneCard(id, data.latest));
+                const existing = grid.querySelector('[data-drone-id="' + id + '"]');
+                if (existing) {
+                    updateCard(existing, data.latest);
+                } else {
+                    grid.appendChild(buildDroneCard(id, data.latest));
+                }
             }
 
             const {alerts} = await fetchJSON('/api/alerts');

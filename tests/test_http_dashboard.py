@@ -45,6 +45,28 @@ class TestDashboardPage:
         resp = client.get("/")
         assert b"Drone" in resp.data
 
+    def test_index_uses_incremental_dom_updates(self, client):
+        resp = client.get("/")
+        html = resp.data.decode()
+        assert "data-drone-id" in html
+        assert "updateDroneCard" in html or "updateCard" in html
+
+    def test_index_does_not_wipe_grid_on_refresh(self, client):
+        resp = client.get("/")
+        html = resp.data.decode()
+        assert "while (grid.firstChild) grid.removeChild(grid.firstChild)" not in html
+
+    def test_register_page_exists(self, client):
+        resp = client.get("/register")
+        assert resp.status_code == 200
+        assert b"<html" in resp.data
+
+    def test_register_page_has_form(self, client):
+        resp = client.get("/register")
+        html = resp.data.decode()
+        assert "username" in html.lower() or "usuario" in html.lower()
+        assert "password" in html.lower() or "senha" in html.lower()
+
 
 class TestAPIDrones:
     def test_list_drones_empty(self, client):

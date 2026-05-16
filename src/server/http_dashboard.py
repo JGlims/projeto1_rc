@@ -39,6 +39,10 @@ def create_app(storage, tcp_server=None, udp_server=None, auth=None):
     def index():
         return render_template("index.html")
 
+    @app.route("/register")
+    def register_page():
+        return render_template("register.html")
+
     @app.route("/api/auth/register", methods=["POST"])
     def register():
         auth_mgr = app.config["auth"]

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta - Drone Telemetry</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .register-box {
+            background: #1e293b;
+            padding: 32px;
+            border-radius: 12px;
+            width: 380px;
+            border: 1px solid #334155;
+        }
+        .register-box h2 { color: #38bdf8; margin-bottom: 8px; font-size: 20px; }
+        .register-box p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+        .register-box input {
+            width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px;
+            border: 1px solid #334155; background: #0f172a; color: #e0e0e0; font-size: 14px;
+        }
+        .register-box input:focus { outline: none; border-color: #38bdf8; }
+        .btn-submit {
+            width: 100%; background: #38bdf8; color: #0a0e17; padding: 10px;
+            font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .btn-submit:hover { opacity: 0.9; }
+        .btn-back {
+            width: 100%; background: #334155; color: #e0e0e0; padding: 10px;
+            margin-top: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .btn-back:hover { opacity: 0.85; }
+        #register-msg { color: #ef4444; font-size: 13px; margin-bottom: 8px; min-height: 18px; }
+        .success { color: #4ade80 !important; }
+    </style>
+</head>
+<body>
+    <div class="register-box">
+        <h2>Criar Conta</h2>
+        <p>Registre-se para acessar o painel de telemetria</p>
+        <div id="register-msg"></div>
+        <input type="text" id="reg-user" placeholder="Usuario" autocomplete="username">
+        <input type="password" id="reg-pass" placeholder="Senha" autocomplete="new-password">
+        <input type="password" id="reg-pass-confirm" placeholder="Confirmar senha" autocomplete="new-password">
+        <button class="btn-submit" id="btn-submit">Criar conta</button>
+        <button class="btn-back" id="btn-back">Voltar ao login</button>
+    </div>
+
+    <script>
+        document.getElementById('btn-back').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+
+        document.getElementById('btn-submit').addEventListener('click', async function() {
+            const user = document.getElementById('reg-user').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const confirm = document.getElementById('reg-pass-confirm').value;
+            const msg = document.getElementById('register-msg');
+
+            msg.className = '';
+            if (!user || !pass) {
+                msg.textContent = 'Preencha usuario e senha';
+                return;
+            }
+            if (pass !== confirm) {
+                msg.textContent = 'As senhas nao coincidem';
+                return;
+            }
+            if (pass.length < 4) {
+                msg.textContent = 'Senha deve ter pelo menos 4 caracteres';
+                return;
+            }
+
+            const resp = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass}),
+            });
+
+            if (resp.ok) {
+                msg.className = 'success';
+                msg.textContent = 'Conta criada! Redirecionando...';
+                setTimeout(function() { window.location.href = '/'; }, 1500);
+            } else {
+                const data = await resp.json();
+                msg.textContent = data.error || 'Erro ao criar conta';
+            }
+        });
+
+        document.querySelectorAll('input').forEach(function(input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') document.getElementById('btn-submit').click();
+            });
+        });
+    </script>
+</body>
+</html>
