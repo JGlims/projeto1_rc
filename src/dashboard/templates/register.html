@@ -1,58 +1,67 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Criar Conta - Drone Telemetry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        neon: { cyan: '#00e5ff', green: '#06ffa5', red: '#ff3b5c' },
+                        surface: { base: '#070b14', raised: '#0d1424', overlay: '#131c32' },
+                    },
+                },
+            },
+        }
+    </script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0a0e17;
-            color: #e0e0e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+        .glass-strong {
+            background: rgba(19, 28, 50, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .register-box {
-            background: #1e293b;
-            padding: 32px;
-            border-radius: 12px;
-            width: 380px;
-            border: 1px solid #334155;
-        }
-        .register-box h2 { color: #38bdf8; margin-bottom: 8px; font-size: 20px; }
-        .register-box p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
-        .register-box input {
-            width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 6px;
-            border: 1px solid #334155; background: #0f172a; color: #e0e0e0; font-size: 14px;
-        }
-        .register-box input:focus { outline: none; border-color: #38bdf8; }
-        .btn-submit {
-            width: 100%; background: #38bdf8; color: #0a0e17; padding: 10px;
-            font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
-        }
-        .btn-submit:hover { opacity: 0.9; }
-        .btn-back {
-            width: 100%; background: #334155; color: #e0e0e0; padding: 10px;
-            margin-top: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
-        }
-        .btn-back:hover { opacity: 0.85; }
-        #register-msg { color: #ef4444; font-size: 13px; margin-bottom: 8px; min-height: 18px; }
-        .success { color: #4ade80 !important; }
     </style>
 </head>
-<body>
-    <div class="register-box">
-        <h2>Criar Conta</h2>
-        <p>Registre-se para acessar o painel de telemetria</p>
-        <div id="register-msg"></div>
-        <input type="text" id="reg-user" placeholder="Usuario" autocomplete="username">
-        <input type="password" id="reg-pass" placeholder="Senha" autocomplete="new-password">
-        <input type="password" id="reg-pass-confirm" placeholder="Confirmar senha" autocomplete="new-password">
-        <button class="btn-submit" id="btn-submit">Criar conta</button>
-        <button class="btn-back" id="btn-back">Voltar ao login</button>
+<body class="bg-surface-base font-sans text-gray-200 min-h-screen flex items-center justify-center antialiased">
+
+    <div class="glass-strong rounded-2xl p-8 w-[400px] shadow-2xl">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-white">Criar Conta</h2>
+                <p class="text-xs text-gray-400">Registre-se para acessar o painel</p>
+            </div>
+        </div>
+
+        <div id="register-msg" class="text-sm mb-3 min-h-[20px]"></div>
+
+        <input type="text" id="reg-user" placeholder="Usuario" autocomplete="username"
+            class="w-full px-4 py-3 mb-3 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+        <input type="password" id="reg-pass" placeholder="Senha" autocomplete="new-password"
+            class="w-full px-4 py-3 mb-3 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+        <input type="password" id="reg-pass-confirm" placeholder="Confirmar senha" autocomplete="new-password"
+            class="w-full px-4 py-3 mb-4 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+
+        <button id="btn-submit"
+            class="w-full py-3 rounded-lg bg-neon-cyan text-surface-base font-bold text-sm hover:brightness-110 transition cursor-pointer">
+            Criar conta
+        </button>
+        <button id="btn-back"
+            class="w-full py-3 mt-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition cursor-pointer">
+            Voltar ao login
+        </button>
     </div>
 
     <script>
@@ -61,37 +70,41 @@
         });
 
         document.getElementById('btn-submit').addEventListener('click', async function() {
-            const user = document.getElementById('reg-user').value.trim();
-            const pass = document.getElementById('reg-pass').value;
-            const confirm = document.getElementById('reg-pass-confirm').value;
-            const msg = document.getElementById('register-msg');
+            var user = document.getElementById('reg-user').value.trim();
+            var pass = document.getElementById('reg-pass').value;
+            var confirm = document.getElementById('reg-pass-confirm').value;
+            var msg = document.getElementById('register-msg');
 
-            msg.className = '';
+            msg.className = 'text-sm mb-3 min-h-[20px]';
             if (!user || !pass) {
+                msg.classList.add('text-neon-red');
                 msg.textContent = 'Preencha usuario e senha';
                 return;
             }
             if (pass !== confirm) {
+                msg.classList.add('text-neon-red');
                 msg.textContent = 'As senhas nao coincidem';
                 return;
             }
             if (pass.length < 4) {
+                msg.classList.add('text-neon-red');
                 msg.textContent = 'Senha deve ter pelo menos 4 caracteres';
                 return;
             }
 
-            const resp = await fetch('/api/auth/register', {
+            var resp = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({username: user, password: pass}),
             });
 
             if (resp.ok) {
-                msg.className = 'success';
+                msg.classList.add('text-neon-green');
                 msg.textContent = 'Conta criada! Redirecionando...';
                 setTimeout(function() { window.location.href = '/'; }, 1500);
             } else {
-                const data = await resp.json();
+                var data = await resp.json();
+                msg.classList.add('text-neon-red');
                 msg.textContent = data.error || 'Erro ao criar conta';
             }
         });

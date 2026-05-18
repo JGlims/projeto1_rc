@@ -67,6 +67,21 @@ class TestDashboardPage:
         assert "username" in html.lower() or "usuario" in html.lower()
         assert "password" in html.lower() or "senha" in html.lower()
 
+    def test_index_uses_tailwind(self, client):
+        resp = client.get("/")
+        html = resp.data.decode()
+        assert "tailwindcss" in html
+
+    def test_index_uses_inter_font(self, client):
+        resp = client.get("/")
+        html = resp.data.decode()
+        assert "Inter" in html
+
+    def test_register_uses_tailwind(self, client):
+        resp = client.get("/register")
+        html = resp.data.decode()
+        assert "tailwindcss" in html
+
 
 class TestAPIDrones:
     def test_list_drones_empty(self, client):
