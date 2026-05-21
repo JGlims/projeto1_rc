@@ -1,65 +1,48 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Criar Conta - Drone Telemetry</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                    colors: {
-                        neon: { cyan: '#00e5ff', green: '#06ffa5', red: '#ff3b5c' },
-                        surface: { base: '#070b14', raised: '#0d1424', overlay: '#131c32' },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        serif: ['Instrument Serif', 'Georgia', 'serif'],
                     },
                 },
             },
         }
     </script>
-    <style>
-        .glass-strong {
-            background: rgba(19, 28, 50, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-    </style>
 </head>
-<body class="bg-surface-base font-sans text-gray-200 min-h-screen flex items-center justify-center antialiased">
+<body class="font-sans antialiased min-h-screen flex items-center justify-center" style="background: radial-gradient(ellipse at 50% 0%, #1c1c20 0%, #09090b 70%);">
 
-    <div class="glass-strong rounded-2xl p-8 w-[400px] shadow-2xl">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                </svg>
-            </div>
-            <div>
-                <h2 class="text-lg font-bold text-white">Criar Conta</h2>
-                <p class="text-xs text-gray-400">Registre-se para acessar o painel</p>
-            </div>
+    <div class="w-full max-w-[400px] p-8">
+        <div class="mb-8">
+            <h1 class="font-serif text-2xl text-white tracking-tight">Drone Telemetry</h1>
+            <p class="text-stone-500 text-xs tracking-[0.15em] uppercase mt-1">Criar Conta</p>
         </div>
 
-        <div id="register-msg" class="text-sm mb-3 min-h-[20px]"></div>
+        <div id="register-msg" class="text-sm mb-4 min-h-[20px]"></div>
 
         <input type="text" id="reg-user" placeholder="Usuario" autocomplete="username"
-            class="w-full px-4 py-3 mb-3 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+            class="w-full px-4 py-3 mb-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
         <input type="password" id="reg-pass" placeholder="Senha" autocomplete="new-password"
-            class="w-full px-4 py-3 mb-3 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+            class="w-full px-4 py-3 mb-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
         <input type="password" id="reg-pass-confirm" placeholder="Confirmar senha" autocomplete="new-password"
-            class="w-full px-4 py-3 mb-4 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
+            class="w-full px-4 py-3 mb-5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
 
         <button id="btn-submit"
-            class="w-full py-3 rounded-lg bg-neon-cyan text-surface-base font-bold text-sm hover:brightness-110 transition cursor-pointer">
+            class="w-full py-3.5 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-stone-100 active:scale-[0.98] transition-all cursor-pointer">
             Criar conta
         </button>
         <button id="btn-back"
-            class="w-full py-3 mt-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition cursor-pointer">
+            class="w-full py-3.5 mt-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-400 text-sm font-medium hover:bg-white/[0.1] hover:text-stone-200 transition-all cursor-pointer">
             Voltar ao login
         </button>
     </div>
@@ -75,19 +58,19 @@
             var confirm = document.getElementById('reg-pass-confirm').value;
             var msg = document.getElementById('register-msg');
 
-            msg.className = 'text-sm mb-3 min-h-[20px]';
+            msg.className = 'text-sm mb-4 min-h-[20px]';
             if (!user || !pass) {
-                msg.classList.add('text-neon-red');
+                msg.classList.add('text-red-400');
                 msg.textContent = 'Preencha usuario e senha';
                 return;
             }
             if (pass !== confirm) {
-                msg.classList.add('text-neon-red');
+                msg.classList.add('text-red-400');
                 msg.textContent = 'As senhas nao coincidem';
                 return;
             }
             if (pass.length < 4) {
-                msg.classList.add('text-neon-red');
+                msg.classList.add('text-red-400');
                 msg.textContent = 'Senha deve ter pelo menos 4 caracteres';
                 return;
             }
@@ -99,12 +82,12 @@
             });
 
             if (resp.ok) {
-                msg.classList.add('text-neon-green');
+                msg.classList.add('text-emerald-400');
                 msg.textContent = 'Conta criada! Redirecionando...';
                 setTimeout(function() { window.location.href = '/'; }, 1500);
             } else {
                 var data = await resp.json();
-                msg.classList.add('text-neon-red');
+                msg.classList.add('text-red-400');
                 msg.textContent = data.error || 'Erro ao criar conta';
             }
         });

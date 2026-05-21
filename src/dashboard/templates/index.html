@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drone Telemetry Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                    colors: {
-                        neon: { cyan: '#00e5ff', green: '#06ffa5', red: '#ff3b5c', amber: '#ffb300' },
-                        surface: { base: '#070b14', raised: '#0d1424', overlay: '#131c32' },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        serif: ['Instrument Serif', 'Georgia', 'serif'],
                     },
                 },
             },
@@ -23,16 +23,17 @@
     </script>
     <style>
         .glass {
-            background: rgba(13, 20, 36, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.04);
         }
-        .glass-strong {
-            background: rgba(19, 28, 50, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        .glass-header {
+            background: rgba(250, 250, 249, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
         }
         .value-transition { transition: color 0.3s ease, opacity 0.15s ease; }
         .pulse-dot {
@@ -41,188 +42,325 @@
         }
         @keyframes pulse-glow {
             0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
-            50% { opacity: 0.5; box-shadow: 0 0 12px currentColor; }
+            50% { opacity: 0.5; box-shadow: 0 0 10px currentColor; }
         }
-        .card-hover { transition: border-color 0.25s ease, box-shadow 0.25s ease; }
+        .card-hover { transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease; }
         .card-hover:hover {
-            border-color: rgba(0, 229, 255, 0.3);
-            box-shadow: 0 0 24px rgba(0, 229, 255, 0.06);
+            border-color: rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
         }
-        .btn-cmd {
-            transition: all 0.2s ease;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
+        .btn-cmd { transition: all 0.15s ease; }
         .btn-cmd:active { transform: scale(0.96); }
+        .dot-grid {
+            background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.035) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { opacity: 0; animation: fadeUp 0.7s ease forwards; }
+        .anim-d1 { animation-delay: 0.1s; }
+        .anim-d2 { animation-delay: 0.25s; }
+        .anim-d3 { animation-delay: 0.4s; }
+
+        .stage { width: 420px; height: 420px; position: relative; display: grid; place-items: center; }
+        .stage > svg { position: absolute; inset: 0; }
+        .globe-wrap { width: 230px; height: 230px; position: relative; }
+        #globe { width: 100%; height: 100%; display: block; }
+
+        .whirl-ring { fill: none; stroke: #1c1917; stroke-linecap: round; transform-origin: 210px 210px; }
+        .ring-a { stroke-width: 1.4; stroke-dasharray: 50 380; animation: spin-cw 3.8s linear infinite; opacity: 0.7; }
+        .ring-b { stroke-width: 1.1; stroke-dasharray: 22 460; animation: spin-cw 5.6s linear infinite; opacity: 0.4; }
+        .ring-c { stroke-width: 0.85; stroke-dasharray: 8 140 28 340; animation: spin-ccw 7.4s linear infinite; opacity: 0.25; }
+        .speck { fill: #1c1917; transform-origin: 210px 210px; }
+        .speck-a { animation: spin-cw 2.8s linear infinite; }
+        .speck-b { animation: spin-ccw 4.2s linear infinite; }
+
+        .orbit { transform-origin: 210px 210px; }
+        .orbit-1 { animation: spin-cw 26s linear infinite; }
+        .orbit-2 { animation: spin-ccw 34s linear infinite; }
+        .drone-body { transform-box: fill-box; transform-origin: center; }
+        .counter-1 { animation: spin-ccw 26s linear infinite; }
+        .counter-2 { animation: spin-cw 34s linear infinite; }
+        .rotor { transform-box: fill-box; transform-origin: center; animation: spin-cw 0.9s linear infinite; }
+        .rotor.alt { animation: spin-ccw 1.1s linear infinite; }
+
+        @keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+        .sphere { fill: none; stroke: #1c1917; stroke-width: 1.2; }
+        .graticule { fill: none; stroke: #1c1917; stroke-width: 0.45; opacity: 0.18; }
+        .land { fill: #1c1917; fill-opacity: 0.88; stroke: none; }
     </style>
 </head>
-<body class="bg-surface-base font-sans text-gray-200 min-h-screen antialiased">
+<body class="bg-stone-50 font-sans text-stone-800 antialiased">
 
-    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-        <div class="glass-strong rounded-2xl p-8 w-[380px] shadow-2xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+    <div id="auth-screen" class="fixed inset-0 z-50 flex" style="transition: opacity 0.5s ease;">
+
+        <div class="hidden md:flex w-[60%] flex-col items-center justify-center relative overflow-hidden dot-grid bg-stone-50">
+            <div class="relative z-10 text-center animate-in">
+                <h1 class="font-serif text-6xl text-stone-900 leading-none tracking-tight">Drone Telemetry</h1>
+                <p class="text-stone-400 mt-4 text-sm tracking-[0.25em] uppercase font-medium">Monitoramento IoT em Tempo Real</p>
+            </div>
+            <div class="relative z-10 mt-10 animate-in anim-d2">
+                <div class="stage">
+                    <svg viewBox="0 0 420 420" aria-hidden="true">
+                        <circle class="whirl-ring ring-a" cx="210" cy="210" r="198"></circle>
+                        <circle class="whirl-ring ring-b" cx="210" cy="210" r="182"></circle>
+                        <circle class="whirl-ring ring-c" cx="210" cy="210" r="166"></circle>
+                        <g class="speck-a"><circle class="speck" cx="210" cy="12" r="2.2"></circle></g>
+                        <g class="speck-b"><circle class="speck" cx="210" cy="408" r="1.6"></circle></g>
+                    </svg>
+                    <div class="globe-wrap">
+                        <svg id="globe" viewBox="0 0 230 230"></svg>
+                    </div>
+                    <svg viewBox="0 0 420 420" aria-hidden="true">
+                        <defs>
+                            <g id="drone-svg">
+                                <line x1="-9" y1="-9" x2="9" y2="9" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round"></line>
+                                <line x1="-9" y1="9" x2="9" y2="-9" stroke="#1c1917" stroke-width="1.6" stroke-linecap="round"></line>
+                                <circle cx="-9" cy="-9" r="3.8" fill="#fafaf9" stroke="#1c1917" stroke-width="0.9"></circle>
+                                <circle cx="9" cy="-9" r="3.8" fill="#fafaf9" stroke="#1c1917" stroke-width="0.9"></circle>
+                                <circle cx="-9" cy="9" r="3.8" fill="#fafaf9" stroke="#1c1917" stroke-width="0.9"></circle>
+                                <circle cx="9" cy="9" r="3.8" fill="#fafaf9" stroke="#1c1917" stroke-width="0.9"></circle>
+                                <g class="rotor"><line x1="-12.6" y1="-9" x2="-5.4" y2="-9" stroke="#1c1917" stroke-width="0.9" stroke-linecap="round"></line></g>
+                                <g class="rotor alt"><line x1="5.4" y1="-9" x2="12.6" y2="-9" stroke="#1c1917" stroke-width="0.9" stroke-linecap="round"></line></g>
+                                <g class="rotor alt"><line x1="-12.6" y1="9" x2="-5.4" y2="9" stroke="#1c1917" stroke-width="0.9" stroke-linecap="round"></line></g>
+                                <g class="rotor"><line x1="5.4" y1="9" x2="12.6" y2="9" stroke="#1c1917" stroke-width="0.9" stroke-linecap="round"></line></g>
+                                <circle cx="-9" cy="-9" r="0.9" fill="#1c1917"></circle>
+                                <circle cx="9" cy="-9" r="0.9" fill="#1c1917"></circle>
+                                <circle cx="-9" cy="9" r="0.9" fill="#1c1917"></circle>
+                                <circle cx="9" cy="9" r="0.9" fill="#1c1917"></circle>
+                                <rect x="-4" y="-4" width="8" height="8" rx="1.7" fill="#1c1917"></rect>
+                                <circle cx="0" cy="0" r="1.3" fill="#fafaf9"></circle>
+                            </g>
+                        </defs>
+                        <g class="orbit orbit-1">
+                            <g transform="translate(380,150)">
+                                <g class="drone-body counter-1"><use href="#drone-svg" transform="scale(2)"></use></g>
+                            </g>
+                        </g>
+                        <g class="orbit orbit-2" style="animation-delay: -12s;">
+                            <g transform="translate(210,60)">
+                                <g class="drone-body counter-2"><use href="#drone-svg" transform="scale(1.8)"></use></g>
+                            </g>
+                        </g>
                     </svg>
                 </div>
-                <div>
-                    <h2 class="text-lg font-bold text-white">Login</h2>
-                    <p class="text-xs text-gray-400">Acesse o painel de telemetria</p>
+            </div>
+            <p class="relative z-10 text-stone-300/50 text-[10px] tracking-[0.2em] uppercase mt-10 animate-in anim-d3">CIC0124 &middot; Redes de Computadores &middot; UnB</p>
+        </div>
+
+        <div class="w-full md:w-[40%] flex items-center justify-center p-8" style="background: radial-gradient(ellipse at 50% 0%, #1c1c20 0%, #09090b 70%);">
+            <div class="w-full max-w-[380px] animate-in anim-d3">
+                <div class="flex gap-8 mb-8 border-b border-white/[0.08]">
+                    <button id="tab-login" onclick="switchToLogin()" class="pb-3.5 text-sm font-medium text-white border-b-2 border-white transition-colors cursor-pointer">Entrar</button>
+                    <button id="tab-register" onclick="switchToRegister()" class="pb-3.5 text-sm font-medium text-stone-500 border-b-2 border-transparent hover:text-stone-300 transition-colors cursor-pointer">Criar Conta</button>
+                </div>
+
+                <div id="form-login" style="transition: opacity 0.2s ease;">
+                    <div id="login-msg" class="text-sm mb-4 min-h-[20px]"></div>
+                    <input type="text" id="login-user" placeholder="Usuario" autocomplete="username"
+                        class="w-full px-4 py-3 mb-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
+                    <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password"
+                        class="w-full px-4 py-3 mb-5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
+                    <button id="btn-login"
+                        class="w-full py-3.5 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-stone-100 active:scale-[0.98] transition-all cursor-pointer">
+                        Entrar
+                    </button>
+                </div>
+
+                <div id="form-register" class="hidden" style="transition: opacity 0.2s ease;">
+                    <div id="register-msg" class="text-sm mb-4 min-h-[20px]"></div>
+                    <input type="text" id="reg-user" placeholder="Usuario" autocomplete="username"
+                        class="w-full px-4 py-3 mb-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
+                    <input type="password" id="reg-pass" placeholder="Senha" autocomplete="new-password"
+                        class="w-full px-4 py-3 mb-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
+                    <input type="password" id="reg-pass-confirm" placeholder="Confirmar senha" autocomplete="new-password"
+                        class="w-full px-4 py-3 mb-5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-stone-200 text-sm placeholder-stone-500 focus:outline-none focus:border-stone-400/40 focus:ring-1 focus:ring-stone-400/20 transition">
+                    <button id="btn-submit"
+                        class="w-full py-3.5 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-stone-100 active:scale-[0.98] transition-all cursor-pointer">
+                        Criar conta
+                    </button>
                 </div>
             </div>
-            <div id="login-msg" class="text-sm mb-3 min-h-[20px]"></div>
-            <input type="text" id="login-user" placeholder="Usuario" autocomplete="username"
-                class="w-full px-4 py-3 mb-3 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
-            <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password"
-                class="w-full px-4 py-3 mb-4 rounded-lg bg-surface-base/80 border border-white/10 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition">
-            <button id="btn-login"
-                class="w-full py-3 rounded-lg bg-neon-cyan text-surface-base font-bold text-sm hover:brightness-110 transition cursor-pointer">
-                Entrar
-            </button>
-            <button id="btn-register"
-                class="w-full py-3 mt-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition cursor-pointer">
-                Criar conta
-            </button>
         </div>
     </div>
 
-    <header class="glass sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+    <div id="dashboard" class="hidden min-h-screen dot-grid" style="opacity: 0; transition: opacity 0.5s ease;">
+        <header class="glass-header sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <h1 class="font-serif text-xl text-stone-900 tracking-tight">Drone Telemetry</h1>
+                <span class="text-[11px] text-stone-400 font-medium uppercase tracking-widest hidden sm:inline">Ground Station</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="header-status" class="flex items-center gap-2 text-xs text-stone-500">
+                    <span class="pulse-dot bg-emerald-500 text-emerald-500"></span>
+                    <span>Sistema ativo</span>
+                </div>
+                <button id="btn-logout" class="hidden text-xs text-stone-500 hover:text-stone-900 transition px-3 py-1.5 rounded-lg hover:bg-stone-200/60 cursor-pointer">
+                    Sair
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
+            <div id="no-drones" class="text-center py-20 text-stone-400">
+                <svg class="w-12 h-12 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                 </svg>
+                <p class="text-sm font-medium">Aguardando dados de telemetria...</p>
+                <p class="text-xs text-stone-300 mt-1">Os drones conectados aparecerao aqui</p>
             </div>
-            <div>
-                <h1 class="text-base font-bold text-white tracking-tight">Drone Telemetry</h1>
-                <p class="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Ground Station Monitor</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <div id="header-status" class="flex items-center gap-2 text-xs text-gray-400">
-                <span class="pulse-dot bg-neon-green text-neon-green"></span>
-                <span>Sistema ativo</span>
-            </div>
-            <button id="btn-logout" class="hidden text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer">
-                Sair
-            </button>
-        </div>
-    </header>
 
-    <main class="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-        <div id="no-drones" class="text-center py-20 text-gray-500">
-            <svg class="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-            </svg>
-            <p class="text-sm font-medium">Aguardando dados de telemetria...</p>
-            <p class="text-xs text-gray-600 mt-1">Os drones conectados aparecerao aqui</p>
-        </div>
+            <div id="drone-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
 
-        <div id="drone-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-
-        <div id="metrics-panel" class="glass-strong rounded-xl p-5 hidden">
-            <div class="flex items-center gap-2 mb-4">
-                <svg class="w-4 h-4 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                <h2 class="text-sm font-semibold text-white">Metricas de Rede</h2>
-            </div>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white/[0.03] rounded-lg p-3">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">RTT Medio</p>
-                    <p class="text-lg font-semibold text-white value-transition" id="m-rtt">--</p>
+            <div id="metrics-panel" class="glass rounded-2xl p-6 hidden">
+                <div class="flex items-center gap-2 mb-5">
+                    <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <h2 class="text-sm font-semibold text-stone-900">Metricas de Rede</h2>
                 </div>
-                <div class="bg-white/[0.03] rounded-lg p-3">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Throughput UDP</p>
-                    <p class="text-lg font-semibold text-white value-transition" id="m-throughput">--</p>
-                </div>
-                <div class="bg-white/[0.03] rounded-lg p-3">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Pacotes</p>
-                    <p class="text-lg font-semibold text-white value-transition" id="m-packets">--</p>
-                </div>
-                <div class="bg-white/[0.03] rounded-lg p-3">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Bytes Totais</p>
-                    <p class="text-lg font-semibold text-white value-transition" id="m-bytes">--</p>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-stone-100/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">RTT Medio</p>
+                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-rtt">--</p>
+                    </div>
+                    <div class="bg-stone-100/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Throughput UDP</p>
+                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-throughput">--</p>
+                    </div>
+                    <div class="bg-stone-100/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Pacotes</p>
+                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-packets">--</p>
+                    </div>
+                    <div class="bg-stone-100/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Bytes Totais</p>
+                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-bytes">--</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="alerts-container" class="space-y-2"></div>
-    </main>
+            <div id="alerts-container" class="space-y-2"></div>
+        </main>
+    </div>
 
     <template id="drone-card-template">
-        <div class="glass card-hover rounded-xl p-5">
+        <div class="glass card-hover rounded-2xl p-5">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
                     </div>
-                    <h2 class="text-sm font-bold text-white tracking-tight" data-field="title"></h2>
+                    <h2 class="text-sm font-bold text-stone-900 tracking-tight" data-field="title"></h2>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="pulse-dot" data-status-dot></span>
                     <span class="text-xs font-semibold uppercase tracking-wider" data-field="status"></span>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
                 <div>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Latitude</p>
-                    <p class="text-sm font-semibold text-gray-200 value-transition" data-field="lat"></p>
+                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Latitude</p>
+                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="lat"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Longitude</p>
-                    <p class="text-sm font-semibold text-gray-200 value-transition" data-field="lon"></p>
+                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Longitude</p>
+                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="lon"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Altitude</p>
-                    <p class="text-sm font-semibold text-gray-200 value-transition" data-field="alt"></p>
+                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Altitude</p>
+                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="alt"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Velocidade</p>
-                    <p class="text-sm font-semibold text-gray-200 value-transition" data-field="speed"></p>
+                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Velocidade</p>
+                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="speed"></p>
                 </div>
             </div>
-            <div class="flex items-center justify-between mb-4 bg-white/[0.03] rounded-lg px-3 py-2">
-                <span class="text-[10px] text-gray-500 uppercase tracking-wider">Bateria</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div class="flex items-center justify-between mb-4 bg-stone-50 rounded-xl px-3.5 py-2.5">
+                <span class="text-[10px] text-stone-400 uppercase tracking-wider">Bateria</span>
+                <div class="flex items-center gap-2.5">
+                    <div class="w-24 h-1.5 bg-stone-200 rounded-full overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" data-battery-bar></div>
                     </div>
                     <span class="text-sm font-bold value-transition" data-field="battery"></span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button class="btn-cmd flex-1 py-2 rounded-lg bg-neon-red/15 text-neon-red text-xs font-bold hover:bg-neon-red/25 cursor-pointer" data-cmd="LAND">LAND</button>
-                <button class="btn-cmd flex-1 py-2 rounded-lg bg-neon-amber/15 text-neon-amber text-xs font-bold hover:bg-neon-amber/25 cursor-pointer" data-cmd="HOVER">HOVER</button>
-                <button class="btn-cmd flex-1 py-2 rounded-lg bg-neon-cyan/15 text-neon-cyan text-xs font-bold hover:bg-neon-cyan/25 cursor-pointer" data-cmd="RTH">RTH</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 border border-red-100 cursor-pointer" data-cmd="LAND">LAND</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 border border-amber-100 cursor-pointer" data-cmd="HOVER">HOVER</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 border border-sky-100 cursor-pointer" data-cmd="RTH">RTH</button>
             </div>
         </div>
     </template>
 
     <script>
-        let authToken = null;
+        var authToken = null;
+
+        function switchToLogin() {
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('form-login').classList.remove('hidden');
+            document.getElementById('tab-login').className = 'pb-3.5 text-sm font-medium text-white border-b-2 border-white transition-colors cursor-pointer';
+            document.getElementById('tab-register').className = 'pb-3.5 text-sm font-medium text-stone-500 border-b-2 border-transparent hover:text-stone-300 transition-colors cursor-pointer';
+            document.getElementById('register-msg').textContent = '';
+        }
+
+        function switchToRegister() {
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.remove('hidden');
+            document.getElementById('tab-register').className = 'pb-3.5 text-sm font-medium text-white border-b-2 border-white transition-colors cursor-pointer';
+            document.getElementById('tab-login').className = 'pb-3.5 text-sm font-medium text-stone-500 border-b-2 border-transparent hover:text-stone-300 transition-colors cursor-pointer';
+            document.getElementById('login-msg').textContent = '';
+        }
+
+        function showDashboard() {
+            var auth = document.getElementById('auth-screen');
+            var dash = document.getElementById('dashboard');
+            auth.style.opacity = '0';
+            auth.style.pointerEvents = 'none';
+            setTimeout(function() {
+                auth.style.display = 'none';
+                dash.classList.remove('hidden');
+                requestAnimationFrame(function() { dash.style.opacity = '1'; });
+            }, 500);
+        }
+
+        function showAuth() {
+            var auth = document.getElementById('auth-screen');
+            var dash = document.getElementById('dashboard');
+            dash.style.opacity = '0';
+            setTimeout(function() {
+                dash.classList.add('hidden');
+                auth.style.display = 'flex';
+                auth.style.pointerEvents = '';
+                requestAnimationFrame(function() { auth.style.opacity = '1'; });
+            }, 500);
+        }
 
         document.getElementById('btn-login').addEventListener('click', async function() {
-            const user = document.getElementById('login-user').value;
-            const pass = document.getElementById('login-pass').value;
-            const msg = document.getElementById('login-msg');
-            const resp = await fetch('/api/auth/login', {
+            var user = document.getElementById('login-user').value;
+            var pass = document.getElementById('login-pass').value;
+            var msg = document.getElementById('login-msg');
+            var resp = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({username: user, password: pass}),
             });
             if (resp.ok) {
-                const data = await resp.json();
+                var data = await resp.json();
                 authToken = data.token;
-                document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('btn-logout').classList.remove('hidden');
+                showDashboard();
                 refresh();
                 refreshMetrics();
             } else {
                 msg.textContent = 'Usuario ou senha incorretos';
-                msg.className = 'text-sm mb-3 min-h-[20px] text-neon-red';
+                msg.className = 'text-sm mb-4 min-h-[20px] text-red-400';
             }
         });
 
@@ -233,46 +371,89 @@
             if (e.key === 'Enter') document.getElementById('btn-login').click();
         });
 
-        document.getElementById('btn-register').addEventListener('click', function() {
-            window.location.href = '/register';
-        });
-
         document.getElementById('btn-logout').addEventListener('click', function() {
             authToken = null;
-            document.getElementById('login-overlay').style.display = 'flex';
             document.getElementById('btn-logout').classList.add('hidden');
             document.getElementById('login-user').value = '';
             document.getElementById('login-pass').value = '';
             document.getElementById('login-msg').textContent = '';
+            switchToLogin();
+            showAuth();
+        });
+
+        document.getElementById('btn-submit').addEventListener('click', async function() {
+            var user = document.getElementById('reg-user').value.trim();
+            var pass = document.getElementById('reg-pass').value;
+            var confirm = document.getElementById('reg-pass-confirm').value;
+            var msg = document.getElementById('register-msg');
+
+            msg.className = 'text-sm mb-4 min-h-[20px]';
+            if (!user || !pass) {
+                msg.classList.add('text-red-400');
+                msg.textContent = 'Preencha usuario e senha';
+                return;
+            }
+            if (pass !== confirm) {
+                msg.classList.add('text-red-400');
+                msg.textContent = 'As senhas nao coincidem';
+                return;
+            }
+            if (pass.length < 4) {
+                msg.classList.add('text-red-400');
+                msg.textContent = 'Senha deve ter pelo menos 4 caracteres';
+                return;
+            }
+
+            var resp = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass}),
+            });
+
+            if (resp.ok) {
+                msg.classList.add('text-emerald-400');
+                msg.textContent = 'Conta criada com sucesso!';
+                setTimeout(function() { switchToLogin(); }, 1500);
+            } else {
+                var data = await resp.json();
+                msg.classList.add('text-red-400');
+                msg.textContent = data.error || 'Erro ao criar conta';
+            }
+        });
+
+        document.querySelectorAll('#form-register input').forEach(function(input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') document.getElementById('btn-submit').click();
+            });
         });
 
         async function fetchJSON(url) {
-            const resp = await fetch(url);
+            var resp = await fetch(url);
             return resp.json();
         }
 
         function statusColor(status) {
             switch ((status || '').toLowerCase()) {
-                case 'flying': return 'text-neon-green';
-                case 'hovering': return 'text-neon-amber';
-                case 'landed': return 'text-gray-400';
-                default: return 'text-gray-500';
+                case 'flying': return 'text-emerald-600';
+                case 'hovering': return 'text-amber-600';
+                case 'landed': return 'text-stone-400';
+                default: return 'text-stone-400';
             }
         }
 
         function statusDot(status) {
             switch ((status || '').toLowerCase()) {
-                case 'flying': return 'bg-neon-green text-neon-green';
-                case 'hovering': return 'bg-neon-amber text-neon-amber';
-                case 'landed': return 'bg-gray-400 text-gray-400';
-                default: return 'bg-gray-600 text-gray-600';
+                case 'flying': return 'bg-emerald-500 text-emerald-500';
+                case 'hovering': return 'bg-amber-500 text-amber-500';
+                case 'landed': return 'bg-stone-300 text-stone-300';
+                default: return 'bg-stone-300 text-stone-300';
             }
         }
 
         function batteryColor(pct) {
-            if (pct <= 15) return 'text-neon-red';
-            if (pct <= 30) return 'text-neon-amber';
-            return 'text-neon-green';
+            if (pct <= 15) return 'text-red-600';
+            if (pct <= 30) return 'text-amber-600';
+            return 'text-emerald-600';
         }
 
         function buildDroneCard(droneId, d) {
@@ -311,9 +492,9 @@
 
             var bar = card.querySelector('[data-battery-bar]');
             bar.style.width = Math.min(100, Math.max(0, d.battery)) + '%';
-            if (d.battery <= 15) bar.className = 'h-full rounded-full transition-all duration-500 bg-neon-red';
-            else if (d.battery <= 30) bar.className = 'h-full rounded-full transition-all duration-500 bg-neon-amber';
-            else bar.className = 'h-full rounded-full transition-all duration-500 bg-neon-green';
+            if (d.battery <= 15) bar.className = 'h-full rounded-full transition-all duration-500 bg-red-500';
+            else if (d.battery <= 30) bar.className = 'h-full rounded-full transition-all duration-500 bg-amber-500';
+            else bar.className = 'h-full rounded-full transition-all duration-500 bg-emerald-500';
         }
 
         async function sendCmd(droneId, type) {
@@ -325,9 +506,7 @@
                 body: JSON.stringify({type: type}),
             });
             var data = await resp.json();
-            if (!resp.ok) {
-                console.error('Erro:', data.error);
-            }
+            if (!resp.ok) console.error('Erro:', data.error);
         }
 
         async function refresh() {
@@ -345,20 +524,15 @@
 
             var activeDrones = new Set(drones);
             grid.querySelectorAll('[data-drone-id]').forEach(function(card) {
-                if (!activeDrones.has(card.getAttribute('data-drone-id'))) {
-                    card.remove();
-                }
+                if (!activeDrones.has(card.getAttribute('data-drone-id'))) card.remove();
             });
 
             for (var i = 0; i < drones.length; i++) {
                 var id = drones[i];
                 var data = await fetchJSON('/api/drones/' + encodeURIComponent(id));
                 var existing = grid.querySelector('[data-drone-id="' + id + '"]');
-                if (existing) {
-                    updateCard(existing, data.latest);
-                } else {
-                    grid.appendChild(buildDroneCard(id, data.latest));
-                }
+                if (existing) updateCard(existing, data.latest);
+                else grid.appendChild(buildDroneCard(id, data.latest));
             }
 
             var alertResult = await fetchJSON('/api/alerts');
@@ -368,10 +542,9 @@
             for (var j = 0; j < alerts.length; j++) {
                 var a = alerts[j];
                 var div = document.createElement('div');
-                div.className = 'glass rounded-lg px-4 py-3 flex items-center gap-3 border-l-2 border-neon-red/60';
-
+                div.className = 'glass rounded-xl px-4 py-3 flex items-center gap-3 border-l-2 border-red-300';
                 var icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                icon.setAttribute('class', 'w-4 h-4 text-neon-red flex-shrink-0');
+                icon.setAttribute('class', 'w-4 h-4 text-red-500 flex-shrink-0');
                 icon.setAttribute('fill', 'none');
                 icon.setAttribute('stroke', 'currentColor');
                 icon.setAttribute('viewBox', '0 0 24 24');
@@ -382,12 +555,10 @@
                 path.setAttribute('d', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z');
                 icon.appendChild(path);
                 div.appendChild(icon);
-
                 var span = document.createElement('span');
-                span.className = 'text-xs text-gray-300';
+                span.className = 'text-xs text-stone-600';
                 span.textContent = a.drone_id + ' — ' + a.alert_type + ': ' + a.message;
                 div.appendChild(span);
-
                 ac.appendChild(div);
             }
         }
@@ -395,9 +566,7 @@
         async function refreshMetrics() {
             var data = await fetchJSON('/api/metrics');
             var panel = document.getElementById('metrics-panel');
-            if (data.rtt || data.throughput) {
-                panel.classList.remove('hidden');
-            }
+            if (data.rtt || data.throughput) panel.classList.remove('hidden');
             if (data.rtt && data.rtt.average_sec !== null) {
                 document.getElementById('m-rtt').textContent = (data.rtt.average_sec * 1000).toFixed(2) + ' ms';
             }
@@ -412,6 +581,54 @@
         refreshMetrics();
         setInterval(refresh, 2000);
         setInterval(refreshMetrics, 3000);
+
+        (async function() {
+            if (typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+
+            var svg = d3.select('#globe');
+            var size = 230;
+            var radius = 100;
+
+            var projection = d3.geoOrthographic()
+                .scale(radius)
+                .translate([size / 2, size / 2])
+                .clipAngle(90)
+                .precision(0.3);
+
+            var path = d3.geoPath(projection);
+
+            svg.append('path').attr('class', 'sphere').attr('d', path({ type: 'Sphere' }));
+
+            var graticule = d3.geoGraticule().step([20, 20]);
+            var gratPath = svg.append('path').attr('class', 'graticule').attr('d', path(graticule()));
+            var landPath = svg.append('path').attr('class', 'land');
+
+            try {
+                var world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(function(r) { return r.json(); });
+                var land = topojson.feature(world, world.objects.land);
+
+                function render() {
+                    landPath.attr('d', path(land));
+                    gratPath.attr('d', path(graticule()));
+                }
+                render();
+
+                var speed = 70;
+                var last = performance.now();
+                var lambda = 0;
+                function tick(now) {
+                    var dt = (now - last) / 1000;
+                    last = now;
+                    lambda = (lambda + speed * dt) % 360;
+                    projection.rotate([lambda, -15, 0]);
+                    render();
+                    requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            } catch (e) {
+                console.warn('Globe data unavailable:', e);
+            }
+        })();
     </script>
 </body>
 </html>
