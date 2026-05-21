@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
@@ -19,6 +20,12 @@
                     },
                 },
             },
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
         }
     </script>
     <style>
@@ -93,16 +100,38 @@
         .sphere { fill: none; stroke: #1c1917; stroke-width: 1.2; }
         .graticule { fill: none; stroke: #1c1917; stroke-width: 0.45; opacity: 0.18; }
         .land { fill: #1c1917; fill-opacity: 0.88; stroke: none; }
+
+        .dark .glass {
+            background: rgba(24, 24, 27, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .dark .glass-header {
+            background: rgba(9, 9, 11, 0.88);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .dark .dot-grid {
+            background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+        }
+        .dark .card-hover:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.25);
+        }
+        .dark .sphere { stroke: #a8a29e; }
+        .dark .graticule { stroke: #a8a29e; }
+        .dark .land { fill: #a8a29e; }
+        .dark .whirl-ring { stroke: #a8a29e; }
+        .dark .speck { fill: #a8a29e; }
     </style>
 </head>
-<body class="bg-stone-50 font-sans text-stone-800 antialiased">
+<body class="bg-stone-50 dark:bg-zinc-950 font-sans text-stone-800 dark:text-stone-200 antialiased">
 
     <div id="auth-screen" class="fixed inset-0 z-50 flex" style="transition: opacity 0.5s ease;">
 
-        <div class="hidden md:flex w-[60%] flex-col items-center justify-center relative overflow-hidden dot-grid bg-stone-50">
+        <div class="hidden md:flex w-[60%] flex-col items-center justify-center relative overflow-hidden dot-grid bg-stone-50 dark:bg-zinc-950">
             <div class="relative z-10 text-center animate-in">
-                <h1 class="font-serif text-6xl text-stone-900 leading-none tracking-tight">Drone Telemetry</h1>
-                <p class="text-stone-400 mt-4 text-sm tracking-[0.25em] uppercase font-medium">Monitoramento IoT em Tempo Real</p>
+                <h1 class="font-serif text-6xl text-stone-900 dark:text-stone-100 leading-none tracking-tight">Drone Telemetry</h1>
+                <p class="text-stone-400 dark:text-stone-500 mt-4 text-sm tracking-[0.25em] uppercase font-medium">Monitoramento IoT em Tempo Real</p>
             </div>
             <div class="relative z-10 mt-10 animate-in anim-d2">
                 <div class="stage">
@@ -150,7 +179,7 @@
                     </svg>
                 </div>
             </div>
-            <p class="relative z-10 text-stone-300/50 text-[10px] tracking-[0.2em] uppercase mt-10 animate-in anim-d3">CIC0124 &middot; Redes de Computadores &middot; UnB</p>
+            <p class="relative z-10 text-stone-300/50 dark:text-stone-600/50 text-[10px] tracking-[0.2em] uppercase mt-10 animate-in anim-d3">CIC0124 &middot; Redes de Computadores &middot; UnB</p>
         </div>
 
         <div class="w-full md:w-[40%] flex items-center justify-center p-8" style="background: radial-gradient(ellipse at 50% 0%, #1c1c20 0%, #09090b 70%);">
@@ -192,54 +221,62 @@
     <div id="dashboard" class="hidden min-h-screen dot-grid" style="opacity: 0; transition: opacity 0.5s ease;">
         <header class="glass-header sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <h1 class="font-serif text-xl text-stone-900 tracking-tight">Drone Telemetry</h1>
-                <span class="text-[11px] text-stone-400 font-medium uppercase tracking-widest hidden sm:inline">Ground Station</span>
+                <a href="/" class="font-serif text-xl text-stone-900 dark:text-stone-100 tracking-tight hover:opacity-70 transition-opacity no-underline">Drone Telemetry</a>
+                <span class="text-[11px] text-stone-400 dark:text-stone-500 font-medium uppercase tracking-widest hidden sm:inline">Ground Station</span>
             </div>
             <div class="flex items-center gap-4">
-                <div id="header-status" class="flex items-center gap-2 text-xs text-stone-500">
+                <div id="header-status" class="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
                     <span class="pulse-dot bg-emerald-500 text-emerald-500"></span>
                     <span>Sistema ativo</span>
                 </div>
-                <button id="btn-logout" class="hidden text-xs text-stone-500 hover:text-stone-900 transition px-3 py-1.5 rounded-lg hover:bg-stone-200/60 cursor-pointer">
+                <button id="btn-theme" onclick="toggleTheme()" class="p-2 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-200/60 dark:hover:bg-white/[0.06] transition cursor-pointer" title="Alternar tema">
+                    <svg id="icon-sun" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <svg id="icon-moon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                </button>
+                <button id="btn-logout" class="hidden text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 transition px-3 py-1.5 rounded-lg hover:bg-stone-200/60 dark:hover:bg-white/[0.06] cursor-pointer">
                     Sair
                 </button>
             </div>
         </header>
 
         <main class="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
-            <div id="no-drones" class="text-center py-20 text-stone-400">
-                <svg class="w-12 h-12 mx-auto mb-4 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div id="no-drones" class="text-center py-20 text-stone-400 dark:text-stone-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-stone-300 dark:text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                 </svg>
                 <p class="text-sm font-medium">Aguardando dados de telemetria...</p>
-                <p class="text-xs text-stone-300 mt-1">Os drones conectados aparecerao aqui</p>
+                <p class="text-xs text-stone-300 dark:text-stone-600 mt-1">Os drones conectados aparecerao aqui</p>
             </div>
 
             <div id="drone-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
 
             <div id="metrics-panel" class="glass rounded-2xl p-6 hidden">
                 <div class="flex items-center gap-2 mb-5">
-                    <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 text-stone-500 dark:text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
-                    <h2 class="text-sm font-semibold text-stone-900">Metricas de Rede</h2>
+                    <h2 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Metricas de Rede</h2>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-stone-100/60 rounded-xl p-3.5">
-                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">RTT Medio</p>
-                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-rtt">--</p>
+                    <div class="bg-stone-100/60 dark:bg-zinc-800/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">RTT Medio</p>
+                        <p class="text-lg font-semibold text-stone-800 dark:text-stone-100 value-transition" id="m-rtt">--</p>
                     </div>
-                    <div class="bg-stone-100/60 rounded-xl p-3.5">
-                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Throughput UDP</p>
-                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-throughput">--</p>
+                    <div class="bg-stone-100/60 dark:bg-zinc-800/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Throughput UDP</p>
+                        <p class="text-lg font-semibold text-stone-800 dark:text-stone-100 value-transition" id="m-throughput">--</p>
                     </div>
-                    <div class="bg-stone-100/60 rounded-xl p-3.5">
-                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Pacotes</p>
-                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-packets">--</p>
+                    <div class="bg-stone-100/60 dark:bg-zinc-800/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Pacotes</p>
+                        <p class="text-lg font-semibold text-stone-800 dark:text-stone-100 value-transition" id="m-packets">--</p>
                     </div>
-                    <div class="bg-stone-100/60 rounded-xl p-3.5">
-                        <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-1">Bytes Totais</p>
-                        <p class="text-lg font-semibold text-stone-800 value-transition" id="m-bytes">--</p>
+                    <div class="bg-stone-100/60 dark:bg-zinc-800/60 rounded-xl p-3.5">
+                        <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-1">Bytes Totais</p>
+                        <p class="text-lg font-semibold text-stone-800 dark:text-stone-100 value-transition" id="m-bytes">--</p>
                     </div>
                 </div>
             </div>
@@ -252,12 +289,12 @@
         <div class="glass card-hover rounded-2xl p-5">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-9 h-9 rounded-xl bg-stone-100 dark:bg-zinc-800 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-stone-500 dark:text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
                     </div>
-                    <h2 class="text-sm font-bold text-stone-900 tracking-tight" data-field="title"></h2>
+                    <h2 class="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight" data-field="title"></h2>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="pulse-dot" data-status-dot></span>
@@ -266,40 +303,57 @@
             </div>
             <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
                 <div>
-                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Latitude</p>
-                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="lat"></p>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Latitude</p>
+                    <p class="text-sm font-semibold text-stone-700 dark:text-stone-200 value-transition" data-field="lat"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Longitude</p>
-                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="lon"></p>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Longitude</p>
+                    <p class="text-sm font-semibold text-stone-700 dark:text-stone-200 value-transition" data-field="lon"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Altitude</p>
-                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="alt"></p>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Altitude</p>
+                    <p class="text-sm font-semibold text-stone-700 dark:text-stone-200 value-transition" data-field="alt"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5">Velocidade</p>
-                    <p class="text-sm font-semibold text-stone-700 value-transition" data-field="speed"></p>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Velocidade</p>
+                    <p class="text-sm font-semibold text-stone-700 dark:text-stone-200 value-transition" data-field="speed"></p>
                 </div>
             </div>
-            <div class="flex items-center justify-between mb-4 bg-stone-50 rounded-xl px-3.5 py-2.5">
-                <span class="text-[10px] text-stone-400 uppercase tracking-wider">Bateria</span>
+            <div class="flex items-center justify-between mb-4 bg-stone-50 dark:bg-zinc-800/50 rounded-xl px-3.5 py-2.5">
+                <span class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider">Bateria</span>
                 <div class="flex items-center gap-2.5">
-                    <div class="w-24 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+                    <div class="w-24 h-1.5 bg-stone-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" data-battery-bar></div>
                     </div>
                     <span class="text-sm font-bold value-transition" data-field="battery"></span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 border border-red-100 cursor-pointer" data-cmd="LAND">LAND</button>
-                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 border border-amber-100 cursor-pointer" data-cmd="HOVER">HOVER</button>
-                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 border border-sky-100 cursor-pointer" data-cmd="RTH">RTH</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-100 dark:border-red-900/30 cursor-pointer" data-cmd="LAND">LAND</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-950/60 border border-amber-100 dark:border-amber-900/30 cursor-pointer" data-cmd="HOVER">HOVER</button>
+                <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 text-xs font-bold hover:bg-sky-100 dark:hover:bg-sky-950/60 border border-sky-100 dark:border-sky-900/30 cursor-pointer" data-cmd="RTH">RTH</button>
             </div>
         </div>
     </template>
 
     <script>
+        function toggleTheme() {
+            var isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcons();
+        }
+
+        function updateThemeIcons() {
+            var isDark = document.documentElement.classList.contains('dark');
+            var sun = document.getElementById('icon-sun');
+            var moon = document.getElementById('icon-moon');
+            if (sun && moon) {
+                sun.classList.toggle('hidden', !isDark);
+                moon.classList.toggle('hidden', isDark);
+            }
+        }
+        updateThemeIcons();
+
         var authToken = null;
 
         function switchToLogin() {
@@ -556,7 +610,7 @@
                 icon.appendChild(path);
                 div.appendChild(icon);
                 var span = document.createElement('span');
-                span.className = 'text-xs text-stone-600';
+                span.className = 'text-xs text-stone-600 dark:text-stone-300';
                 span.textContent = a.drone_id + ' — ' + a.alert_type + ': ' + a.message;
                 div.appendChild(span);
                 ac.appendChild(div);
