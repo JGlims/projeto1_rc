@@ -328,6 +328,24 @@
                     <span class="text-sm font-bold value-transition" data-field="battery"></span>
                 </div>
             </div>
+            <div class="grid grid-cols-4 gap-2 mb-4 pt-3 border-t border-stone-100 dark:border-zinc-800">
+                <div>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Protocolo</p>
+                    <p class="text-xs font-semibold text-stone-600 dark:text-stone-300" data-field="protocol">UDP/TCP</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">RTT</p>
+                    <p class="text-xs font-semibold text-stone-600 dark:text-stone-300 value-transition" data-field="rtt">--</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Throughput</p>
+                    <p class="text-xs font-semibold text-stone-600 dark:text-stone-300 value-transition" data-field="throughput">--</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-stone-400 dark:text-stone-500 uppercase tracking-wider mb-0.5">Pkt Size</p>
+                    <p class="text-xs font-semibold text-stone-600 dark:text-stone-300 value-transition" data-field="pkt-size">--</p>
+                </div>
+            </div>
             <div class="flex gap-2">
                 <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-100 dark:border-red-900/30 cursor-pointer" data-cmd="LAND">LAND</button>
                 <button class="btn-cmd flex-1 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-950/60 border border-amber-100 dark:border-amber-900/30 cursor-pointer" data-cmd="HOVER">HOVER</button>
@@ -549,6 +567,9 @@
             if (d.battery <= 15) bar.className = 'h-full rounded-full transition-all duration-500 bg-red-500';
             else if (d.battery <= 30) bar.className = 'h-full rounded-full transition-all duration-500 bg-amber-500';
             else bar.className = 'h-full rounded-full transition-all duration-500 bg-emerald-500';
+
+            var pktPayload = JSON.stringify({drone_id: d.drone_id, ts: d.ts, lat: d.lat, lon: d.lon, alt: d.alt, speed: d.speed, battery: d.battery, status: d.status});
+            card.querySelector('[data-field="pkt-size"]').textContent = new Blob([pktPayload]).size + ' B';
         }
 
         async function sendCmd(droneId, type) {
@@ -621,14 +642,28 @@
             var data = await fetchJSON('/api/metrics');
             var panel = document.getElementById('metrics-panel');
             if (data.rtt || data.throughput) panel.classList.remove('hidden');
+
+            var rttMs = null;
             if (data.rtt && data.rtt.average_sec !== null) {
-                document.getElementById('m-rtt').textContent = (data.rtt.average_sec * 1000).toFixed(2) + ' ms';
+                rttMs = (data.rtt.average_sec * 1000).toFixed(2);
+                document.getElementById('m-rtt').textContent = rttMs + ' ms';
             }
+            var perDroneThroughput = null;
             if (data.throughput) {
                 document.getElementById('m-throughput').textContent = (data.throughput.bytes_per_second / 1024).toFixed(2) + ' KB/s';
                 document.getElementById('m-packets').textContent = data.throughput.packet_count;
                 document.getElementById('m-bytes').textContent = data.throughput.total_bytes;
+
+                var cards = document.querySelectorAll('#drone-grid [data-drone-id]');
+                var n = cards.length || 1;
+                perDroneThroughput = (data.throughput.bytes_per_second / n / 1024).toFixed(2);
             }
+
+            var cards = document.querySelectorAll('#drone-grid [data-drone-id]');
+            cards.forEach(function(card) {
+                if (rttMs !== null) card.querySelector('[data-field="rtt"]').textContent = rttMs + ' ms';
+                if (perDroneThroughput !== null) card.querySelector('[data-field="throughput"]').textContent = perDroneThroughput + ' KB/s';
+            });
         }
 
         refresh();
